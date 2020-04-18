@@ -252,17 +252,21 @@ void * process(struct MsgProcessPacket * args)/*char ** msg*/
 	strncpy(temp, msg, 4);
 	flag = atoi(temp);
 	char * pdata = msg + 4;	//越过类型，指向第一个数据
-	if(flag == 0)
+	if(flag == 0)		//处理客户端退出
 		processClientExit(&send_fd,pPacket->userSocketMap);
-	else if(flag == 1)		//来自客户端的注册请求
+	else if(flag == 1)	//来自客户端的注册请求
 		processRegister(&pdata);
 	else if(flag == 2)	//来自客户端的登陆请求
 		processLogin(&pdata,&send_fd,pPacket->userSocketMap);			
-	else if(flag == 3)
+	else if(flag == 3)	//转发消息
 	{
 		char * p = msg;
 		processRelay(&p, &send_fd, pPacket->userSocketMap);
 		return NULL;
+	}
+	else if(flag == 4)	//接收客户端文件
+	{
+		processRecvFile(&pdata);
 	}
 	else
 		return NULL;

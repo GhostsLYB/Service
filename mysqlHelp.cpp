@@ -191,7 +191,7 @@ void saveLoginLog(const char* userName, const char* ip, const int port)
 	char tmpbuf[20];
 	char *p = tmpbuf;
 	getCurrentTime(p);
-	printf("current time is [%s]\n",p);
+	/*printf("current time is [%s]\n",p);*/
 	char sql[1024] = {0};
 	sprintf(sql, "insert into login_log values(null, '%s', '%s', '%s', %d, '%s')",userName,tmpbuf,ip,port,"");
 	initMysql();

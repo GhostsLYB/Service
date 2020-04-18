@@ -77,3 +77,30 @@ void sendSyncFile(const char *userName, const int fd)
 	//showFile("/tmp/homepage.h", fd);
         memset(fileName, 0, sizeof(fileName));
 }
+
+void processRecvFile(char ** msg)
+{
+
+/*msg格式 文件名长+文件名+分段编号+最大编号+数据段长度+数据段
+          [  4   ]+[ *  ]+[  8位 ]+[  8位 ]+[   4位  ]+[ *  ]*/
+	int len;
+	char fileName[100] = {0}, filePath = {0}, temp[20] = {0};
+	char * p = *msg;
+	long  currentNum;
+	long  maxNum;
+	strncpy(temp, p, 4); p += 4; len = atoi(temp);
+	strncpy(fileName, p, len); p += len;
+	strncpy(temp, p, 8); p += 4; 
+	currentNum = atoi(temp);
+	strncpy(temp, p, 8); p += 4; 
+	maxNum = atoi(temp);
+	strncpy(temp, p, 4); p += 4; len = atoi(temp); //数据长度len, 数据首地址p
+	
+	char * pFileName = fileName;
+	strcpy(&filePath, string("/tmp/").c_str());
+	strcat(&filePath, pFileName);
+
+	FILE * writeFile = fopen(&filePath, "a");
+	len = fwrite(p, sizeof(char), len, writeFile);
+	printf("fileName(%s),filePath(%s),currNum(%d),maxNum(%d),writeSize(%d)",fileName,filePath,currentNum,maxNum,len);
+}

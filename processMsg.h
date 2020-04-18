@@ -43,5 +43,6 @@ void * process(struct MsgProcessPacket * args);
 
 void sendSyncFile(const char* userName, const int fd);
 
+void processRecvFile(char ** msg);
 
 #endif
