@@ -17,7 +17,8 @@
 #include "data.h"
 using namespace std;
 
-#define MAXSIZE 1024
+#define MAXSIZE  1024
+#define SENDSIZE 4296
 
 #define ERR_EXIT(m) \
 	do \
@@ -239,11 +240,19 @@ void * checkServiceData(void *args)
 			else
 				showTable(pName);
 		}
+		else if(strncmp(pbuf, "del tmp ", 8) == 0)
+		{
+			char *pName = pbuf + 8;
+			char filePath[50] = {0};
+			sprintf(filePath, "/tmp/%s", pName);
+			remove(filePath);
+		}
 		else if(strcmp(pbuf, "help") == 0)
 		{
 			printf("help        	     : 显示帮助信息\n");
 			printf("show client 	     : 显示已登陆的用户和连接的TCP套接字\n");
 			printf("show table tableName : 显示表tableNamez中的数据\n");
+			printf("del tmp fileName     : 删除文件/tmp/fileName\n");
 			printf("exit        	     : 退出服务器程序\n");
 		}
 		else if(strcmp(pbuf, "exit") == 0)
@@ -266,7 +275,7 @@ void * processClientMsg(void * args)
 	pthread_mutex_t *pMutex   = ((struct ProcessClientMsgPacket*)args)->pMutex;
 
 
-	char recvbuf[1024] = {0};
+	char recvbuf[SENDSIZE] = {0};
 	char temp[1024] = {0};
 	char * p = temp;
 	pthread_mutex_lock(pMutex);
@@ -311,7 +320,10 @@ void * processClientMsg(void * args)
 	packet.msg = p;	
 	//printf("packet.msg = [%s]\n",packet.msg);
 	packet.send_fd = client_fd;
+	printf("!!!!!!!!!sendfd = %d !!!!!!!!!!!\n", client_fd);
 	packet.userSocketMap = pMap;
+	printf("aaaaaaaaaaa\n");
 	process(&packet); 
+	printf("aaaaaaaaaaa\n");
 	return NULL;
 }
