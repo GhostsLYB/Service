@@ -11,6 +11,7 @@
 #include <errno.h>
 #include "mysqlHelp.h"
 #include "data.h"
+#include <pthread.h>
 
 void addPacketLen(char ** msg);
 
@@ -43,6 +44,8 @@ void * process(struct MsgProcessPacket * args);
 
 void sendSyncFile(const char* userName, const int fd);
 
-void processRecvFile(char ** msg);
+void processRecvFile(char ** msg, int client_fd);
+
+void processSendFile(char ** msg, int client_fd);
 
 #endif

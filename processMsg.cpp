@@ -243,7 +243,6 @@ void processRelay(char ** msg,int * send_fd, map<string,int> * userSocketMap)
 //*msg数据格式：[类型][长度][数据段][长度][数据段]。。。。。。
 void * process(struct MsgProcessPacket * args)/*char ** msg*/
 {
-		printf("bbbbbbbb");
 	struct MsgProcessPacket *pPacket = args;
 	pMutex = args->pMutex;
 	char *msg = args->msg;
@@ -267,8 +266,12 @@ void * process(struct MsgProcessPacket * args)/*char ** msg*/
 	}
 	else if(flag == 4)	//接收客户端文件
 	{
-		printf("bbbbbbbb");
-		processRecvFile(&pdata);
+		processRecvFile(&pdata, send_fd);
+		return NULL;
+	}
+	else if(flag == 5)	//向客户端发送文件
+	{
+		processSendFile(&pdata, send_fd);
 		return NULL;
 	}
 	else

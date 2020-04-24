@@ -3,7 +3,11 @@
 #define READ_NUM 1025
 #define MAX_SEND_SIZE 1224 /*固定长度 28 + 文件名(最长) + 数据段(最长1024) + 1位空字符*/
 
+#define BUF_SIZE 4096
+#define MAX_SIZE 4296
+
 extern pthread_mutex_t *pMutex;
+int times = 0;
 
 void showFile(const char *filePath, const int fd)
 {
@@ -78,33 +82,85 @@ void sendSyncFile(const char *userName, const int fd)
         memset(fileName, 0, sizeof(fileName));
 }
 
-void processRecvFile(char ** msg)
+void processRecvFile(char ** msg, int client_fd)/*接收客户端client_fd套接字发送的文件*/
 {
-
-/*msg格式 文件名长+文件名+分段编号+最大编号+数据段长度+数据段
-          [  4   ]+[ *  ]+[  8位 ]+[  8位 ]+[   4位  ]+[ *  ]*/
+/*msg格式 文件名长+文件名+文件大小
+          [  4   ]+[ *  ]+[  8位 ]*/
 	int len;
 	char fileName[100] = {0}, filePath[100] = {0}, temp[20] = {0};
 	char * p = *msg;
-	long  currentNum;
-	long  maxNum;
+	//long  currentNum;
+	//long  maxNum;
+	long fileSize;
 	strncpy(temp, p, 4); p += 4; len = atoi(temp);
 	strncpy(fileName, p, len); p += len;	//文件名
-	strncpy(temp, p, 8); p += 8; 		//当前分段号
-	currentNum = atoi(temp);
-	strncpy(temp, p, 8); p += 8;		//最大分段号 
-	maxNum = atoi(temp);
-	strncpy(temp, p, 4); p += 4; len = atoi(temp); //数据长度len, 数据首地址p
-	
+	strncpy(temp, p, 8); p += 8;
+	fileSize = atol(temp);
+
 	char * pFileName = fileName;
 	strcpy(filePath, string("/tmp/").c_str());
 	strcat(filePath, pFileName);
 
-	FILE * writeFile = fopen(filePath, "a");
+	FILE *writeFile = fopen(filePath, "a");/*打开接收文件*/
 	if(writeFile == NULL)
 		printf("open writeFile fail\n");
 	else
 		printf("open writeFile success\n");
-	len = fwrite(p, sizeof(char), len, writeFile);
-	printf("fileName(%s),filePath(%s),currNum(%d),maxNum(%d),writeSize(%d)",fileName,filePath,currentNum,maxNum,len);
+
+	/*循环接收数据并写入数据*/
+	long recvSize = 0;
+	char recvbuf[MAX_SIZE] = {0};
+	while(1){
+		int recvLen = recv(client_fd, recvbuf, MAX_SIZE, 0);
+		len = fwrite(recvbuf, sizeof(char), recvLen, writeFile);
+		recvSize += len;
+		times++;
+	printf("filePath(%s),recvSize(%d),writeSize(%d),times(%d)\n",filePath,recvSize,len,times);
+		if(recvSize == fileSize){
+			times = 0;
+			break;
+		}
+		memset(recvbuf, 0, sizeof(recvbuf));
+	}
+	fclose(writeFile);
+}
+
+void processSendFile(char **msg, int client_fd)/*向客户端client_fd套接字发送文件*/
+{
+/*msg格式 文件名长+文件名	文件信息格式：文件名长+文件名+文件长度
+          [  4   ]+[ *  ]		      [   4  ]+[  * ]+[  8  ]*/
+	char * p = *msg;
+	char temp[100] = {0};
+	char fileName[100] = {0};
+	char filePath[100] = {0};
+	char sendbuf[MAX_SIZE] = {0};
+	long fileSize = 0;
+	strncpy(temp, p, 4);	//读取文件长度
+	p += 4;
+	strncpy(fileName, p, atoi(temp));//读取文件名
+	sprintf(filePath, "/tmp/%s", fileName);//设置文件路径
+	FILE * sendFile = fopen(filePath, "r");
+	if(sendFile == NULL){
+		printf("open file [%s] fail!\n", filePath); 
+	}
+	else{
+		fseek(sendFile, 0L, SEEK_END);
+		fileSize = ftell(sendFile);
+		fseek(sendFile, 0L, SEEK_SET);
+	}
+	sprintf(sendbuf, "%4d%s%8ld", 12+strlen(fileName), fileName, fileSize);//发送文件信息的缓冲区
+	printf("send file [%s]\n", sendbuf);
+	write(client_fd, sendbuf, strlen(sendbuf));//发送文件信息
+	if(fileSize == 0) //文件为空或文件不存在时不发送
+		return;
+	sleep(1); //暂停一秒再发送数据
+	
+	long sendSize = 0;
+	while(!feof(sendFile))
+	{
+		int len = fread(sendbuf, sizeof(char), BUF_SIZE, sendFile);
+		len = write(client_fd, sendbuf, strlen(sendbuf));
+		sendSize += len;
+		printf("file[%s],sendSize[%ld]\n", fileName, sendSize);
+	}
 }

@@ -17,8 +17,11 @@
 #include "data.h"
 using namespace std;
 
-#define MAXSIZE  1024
-#define SENDSIZE 4296
+#define MAXSIZE  1024		/*epoll允许的最大文件描述符并发数量*/
+#define SENDSIZE 4296		/*数据接受缓冲区大小*/
+#define RECV_SIZE 64*1024 	/*套接字接受缓冲区大小🗜*/
+
+#define TEST_SOCK_BUF
 
 #define ERR_EXIT(m) \
 	do \
@@ -96,6 +99,8 @@ int main(void)
 	struct sockaddr_in peeraddr;
 	int conn;
 	socklen_t peerlen = sizeof(peeraddr);
+	int recv_size = RECV_SIZE;
+	socklen_t optlen = sizeof(recv_size);
 	
 	//在单进程中使用epoll维护多个套接口（包括监听套接口和已连接套接口）
 	
@@ -125,10 +130,20 @@ int main(void)
 	else
 		printf("check service data process fail\n");
 	bool isExit = false;
+	int exitSocket = -1;/*退出epoll的套接字，大于2时退出*/
 	while(1)
 	{
 		if(isExit)
 			break;
+		if(exitSocket > 2) //有套接字退出eopll
+		{
+			pthread_mutex_lock(&mutex);
+			struct epoll_event ev;		/*初始化一个epoll_event*/
+			ev.events = EPOLLIN;
+			ev.data.fd = exitSocket;
+			ret = epoll_ctl(epfd, EPOLL_CTL_DEL, exitSocket, &ev);
+			pthread_mutex_unlock(&mutex);
+		}
 		int num = epoll_wait(epfd, events, MAXSIZE, -1);
 		if(num == -1)
 		{
@@ -152,6 +167,17 @@ int main(void)
 			else if(events[i].data.fd == listenfd)
 			{
 				conn = accept(events[i].data.fd, (struct sockaddr*)&peeraddr, &peerlen);
+				/*设置套接字conn的接受缓冲区大小*/
+				setsockopt(conn, SOL_SOCKET,SO_RCVBUF , (char *)&recv_size, optlen);
+#ifdef TEST_SOCK_BUF
+
+int err = getsockopt(conn, SOL_SOCKET, SO_RCVBUF, &recv_size, &optlen); 
+    if(err<0){ 
+        printf("获取接收缓冲区大小错误\n"); 
+    } 
+   printf(" 接收缓冲区原始大小为: %d 字节\n",recv_size); 
+
+#endif
 				if(conn < 0)
 					ERR_EXIT("accept");
 				ev.events = EPOLLIN | EPOLLET;
@@ -176,11 +202,12 @@ int main(void)
 				packet.client_fd = events[i].data.fd;
 				packet.pMap = &userSocketMap;
 				packet.pMutex = &mutex;
+				packet.exitSocket = &exitSocket;
 				ret = pthread_create(&tid, NULL, processClientMsg, &packet);
-				if(ret == 0)
-					printf("create thread for process client message successed\n");
-				else
-					printf("create thread fail\n");
+				//if(ret == 0)
+					//printf("create thread for process client message successed\n");
+				//else
+					//printf("create thread fail\n");
 			}
 		}
 	}
@@ -240,9 +267,9 @@ void * checkServiceData(void *args)
 			else
 				showTable(pName);
 		}
-		else if(strncmp(pbuf, "del tmp ", 8) == 0)
+		else if(strncmp(pbuf, "rm ", 3) == 0)
 		{
-			char *pName = pbuf + 8;
+			char *pName = pbuf + 3;
 			char filePath[50] = {0};
 			sprintf(filePath, "/tmp/%s", pName);
 			remove(filePath);
@@ -252,7 +279,7 @@ void * checkServiceData(void *args)
 			printf("help        	     : 显示帮助信息\n");
 			printf("show client 	     : 显示已登陆的用户和连接的TCP套接字\n");
 			printf("show table tableName : 显示表tableNamez中的数据\n");
-			printf("del tmp fileName     : 删除文件/tmp/fileName\n");
+			printf("rm fileName          : 删除文件/tmp/fileName\n");
 			printf("exit        	     : 退出服务器程序\n");
 		}
 		else if(strcmp(pbuf, "exit") == 0)
@@ -273,7 +300,7 @@ void * processClientMsg(void * args)
 	int 		client_fd = ((struct ProcessClientMsgPacket*)args)->client_fd;
 	map<string,int> *pMap 	  = ((struct ProcessClientMsgPacket*)args)->pMap;
 	pthread_mutex_t *pMutex   = ((struct ProcessClientMsgPacket*)args)->pMutex;
-
+	int		*exitSocket = ((struct ProcessClientMsgPacket*)args)->exitSocket;
 
 	char recvbuf[SENDSIZE] = {0};
 	char temp[1024] = {0};
@@ -284,6 +311,7 @@ void * processClientMsg(void * args)
 	printf("recvbuf message length is %d\n",len);
 	memset(recvbuf, 0, sizeof(recvbuf));
 	int ret = readn(client_fd, recvbuf, len);	/*读取消息*/
+	printf("recvbuf is [%s]\n", recvbuf);
 	pthread_mutex_unlock(pMutex);
 	if(ret == -1)
 		ERR_EXIT("readn");
@@ -303,15 +331,11 @@ void * processClientMsg(void * args)
 		if(exitUserName != "")		/*保存退出日志（存入用户退出登陆时间）*/
 			saveExitLog(exitUserName);
                 printf("client closed\n");
-		struct epoll_event ev;		/*初始化一个epoll_event*/
-		ev.events = EPOLLIN;
-		ev.data.fd = client_fd;
-		ret = epoll_ctl(epfd, EPOLL_CTL_DEL, client_fd, &ev);
                 close(client_fd);		/*关闭客户端套接字*/
 		pthread_mutex_unlock(pMutex);
                 return NULL;
 	}
-	printf("len = %d recvbuf = [%s]\n",len,recvbuf);
+	//printf("len = %d recvbuf = [%s]\n",len,recvbuf);
         //outInfo(recvbuf);
 	p = recvbuf;
 	struct MsgProcessPacket packet;
@@ -320,10 +344,8 @@ void * processClientMsg(void * args)
 	packet.msg = p;	
 	//printf("packet.msg = [%s]\n",packet.msg);
 	packet.send_fd = client_fd;
-	printf("!!!!!!!!!sendfd = %d !!!!!!!!!!!\n", client_fd);
 	packet.userSocketMap = pMap;
-	printf("aaaaaaaaaaa\n");
+	packet.exitSocket = exitSocket;
 	process(&packet); 
-	printf("aaaaaaaaaaa\n");
 	return NULL;
 }

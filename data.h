@@ -22,6 +22,7 @@ struct MsgProcessPacket
 	char *msg;
 	int send_fd;
 	map<string, int> * userSocketMap;
+	int *exitSocket;
 };
 
 /*处理客户端消息结构体，用户处理客户端套接字有数据可读时作为线程函数参数*/
@@ -31,6 +32,7 @@ struct ProcessClientMsgPacket
 	int client_fd;          /*与客户端通信的套接字文件描述符*/
 	map<string,int> * pMap;   /*登陆用户的用户名与连接套接字的map指针*/
 	pthread_mutex_t * pMutex;/*主函数中的互斥锁*/
+	int *exitSocket;
 };
 
 #endif 
