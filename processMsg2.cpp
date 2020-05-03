@@ -100,6 +100,8 @@ void processRecvFile(char ** msg, int client_fd)/*接收客户端client_fd套接
 	char * pFileName = fileName;
 	strcpy(filePath, string("/tmp/").c_str());
 	strcat(filePath, pFileName);
+	if(access(filePath, F_OK) != -1)
+		remove(filePath); /*先删除原同名文件*/
 
 	FILE *writeFile = fopen(filePath, "a");/*打开接收文件*/
 	if(writeFile == NULL)
@@ -168,4 +170,43 @@ void processSendFile(char **msg, int client_fd)/*向客户端client_fd套接字�
 		usleep(100000);//间隔100毫秒发送数据
 		//sleep(1);
 	}
+}
+
+void processModifyInfo(char ** msg)
+{
+	//enum ModifyFlag{imageUrl = 0,userName,number,address,personalSignature,phone};
+	/*const char * modifyFlags[6] = {string("imageUrl").c_str(),\
+				 string("userName").c_str(),\
+				 string("number").c_str(),\
+				 string("address").c_str(),\
+				 string("personalSignature").c_str(),\
+				 string("phone").c_str()};*/
+	const char * modifyFlags[6] = {"imageUrl","userName","number","address","personalSignature","phone"};
+	/*服务器接收消息格式：总长+类型+修改类型+用户名长度+用户名+信息长度+信息*/
+	/*msg格式：修改类型+用户名长度+用户名+信息长度+信息*/
+	printf("修改信息recv msg: [%s]\n", *msg);
+	//1.获取修改类型 2.获取修改用户名 3.获取修改信息
+	char * p = *msg;
+	int modifyFlag = -1;//0:imageUrl 1:userName 2:number 3:address 4:personalSignature 5:phone
+	int len = 0;
+	char temp[1024] = {0};
+	char userName[100] = {0};
+	strncpy(temp, p, 4); p += 4;	//修改类型
+	modifyFlag = atoi(temp);
+	strncpy(temp, p, 4); p += 4;	//用户名长度
+	len = atoi(temp);
+	strncpy(userName, p, len); p += len;//用户名
+	strncpy(temp, p, 4); p += 4;	//信息长度 此时p指向信息首地址
+	len = atoi(temp);		
+	char tableName[20] = "user_info";
+	if(modifyFlag == 0)		//修改头像需要加上文件路径前缀/tmp/
+	{
+		sprintf(temp,"/tmp/%s", p);
+		p = temp;
+	}
+	if(modifyFlag == 5)		//如果修改电话，则更新users表
+		strcpy(tableName, "users");
+	updateTableField(tableName,"username",userName,modifyFlags[modifyFlag],p);	
+	if(strcmp(modifyFlags[modifyFlag], "username"))//用户名需要将users表中的信息也修改（还有其他表待完善）
+		updateTableField("users","username",userName,modifyFlags[modifyFlag],p);	
 }

@@ -58,4 +58,7 @@ void saveExitLog(const string userName);
 
 void exportTable(const char *userName, const char *ip);
 
+void updateTableField(const char *tableName, const char *conditionField, const char *conditionValue,
+		      const char *modifyField, const char *modifyValue);
+
 #endif

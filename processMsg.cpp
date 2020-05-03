@@ -274,6 +274,11 @@ void * process(struct MsgProcessPacket * args)/*char ** msg*/
 		processSendFile(&pdata, send_fd);
 		return NULL;
 	}
+	else if(flag == 6)	//处理客户端的修改信息请求
+	{
+		processModifyInfo(&pdata);
+		return NULL;
+	}
 	else
 		return NULL;
 	sprintf(temp, "%4d", strlen(msg));

@@ -48,4 +48,6 @@ void processRecvFile(char ** msg, int client_fd);
 
 void processSendFile(char ** msg, int client_fd);
 
+void processModifyInfo(char ** msg);
+
 #endif

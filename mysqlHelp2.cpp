@@ -70,3 +70,18 @@ void exportTable(const char *userName, const char *ip)
 	}
 
 }
+
+void updateTableField(const char *tableName,const char *conditionField,const char *conditionValue,
+                      const char *modifyField, const char *modifyValue)
+{
+	initMysql();
+	char sql[1024] = {};
+	sprintf(sql, "update %s set %s = '%s' where %s = '%s'",
+		      tableName, modifyField, modifyValue, conditionField, conditionValue);
+	printf("sql = [%s]\n", sql);
+	int ret = mysql_query(mysql, sql);
+	if(ret == 0)
+		printf("update successed!\n");
+	else
+		printf("update failed!\n");
+}
