@@ -200,10 +200,10 @@ void processLogin(char ** msg, int *send_fd, map<string,int> * userSocketMap)
 void processRelay(char ** msg,int * send_fd, map<string,int> * userSocketMap)
 {
 	char *p = *msg;
-	char temp[1024] = {0};
+	char temp[2048] = {0};
 	char recvName[30] = {0};
 	strncpy(temp,p,4);
-	int flag = atoi(temp);			//类型
+	int flag = atoi(temp);			//类型3:文字 7:语音
 	p += 4;
 	strncpy(temp,p,4);			//取接收用户名长度
 	p += 4;
@@ -221,8 +221,17 @@ void processRelay(char ** msg,int * send_fd, map<string,int> * userSocketMap)
 	int recv_fd = (*userSocketMap)[string(recvName)];	//接收端套接字
 	pthread_mutex_unlock(pMutex);
 	string sendName = iter->first;				//发送发用户名
-	char * pMsg = temp + 4;					//获取消息（不含长度）
-	saveChatInfo(sendName, string(recvName), flag, pMsg, string("").c_str());
+	char * pMsg = NULL;
+	char * url  = NULL;
+	if(flag == 3)
+	{
+		pMsg = temp + 4;				//获取消息（不含长度）
+	}
+	else if(flag == 7)
+	{
+		url = temp + 4;
+	}
+	saveChatInfo(sendName, string(recvName), flag, pMsg, url);
 	if(recv_fd == 0)	//原带有flag的消息加上消息长度头部后存入数据库
 	{
 		return;
@@ -258,8 +267,9 @@ void * process(struct MsgProcessPacket * args)/*char ** msg*/
 		processRegister(&pdata);
 	else if(flag == 2)	//来自客户端的登陆请求
 		processLogin(&pdata,&send_fd,pPacket->userSocketMap);			
-	else if(flag == 3)	//转发消息
+	else if(flag == 3 || flag == 7)	//转发消息
 	{
+		/*3:文字消息 7：语音消息*/
 		char * p = msg;
 		processRelay(&p, &send_fd, pPacket->userSocketMap);
 		return NULL;

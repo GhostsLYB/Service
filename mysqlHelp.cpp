@@ -153,7 +153,7 @@ void createChatInfoTable(const char * tableName)
 		     `peerName`  varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,	\
 		     `flag`  int NOT NULL ,								\
 		     `direction`  varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL ,	\
-		     `word`  varchar(1024) CHARACTER SET utf8 COLLATE utf8_general_ci NULL ,		\
+		     `word`  varchar(2048) CHARACTER SET utf8 COLLATE utf8_general_ci NULL ,		\
 		     `url`  varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL ,		\
 		     `time`  varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NULL ,		\
 		     PRIMARY KEY (`id`))");
