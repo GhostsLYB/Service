@@ -227,7 +227,7 @@ void processRelay(char ** msg,int * send_fd, map<string,int> * userSocketMap)
 	{
 		pMsg = temp + 4;				//获取消息（不含长度）
 	}
-	else if(flag == 7)
+	else if(flag == 7 || flag == 8 || flag == 9)		//语音、图片、文件都存储url
 	{
 		url = temp + 4;
 	}
@@ -267,9 +267,9 @@ void * process(struct MsgProcessPacket * args)/*char ** msg*/
 		processRegister(&pdata);
 	else if(flag == 2)	//来自客户端的登陆请求
 		processLogin(&pdata,&send_fd,pPacket->userSocketMap);			
-	else if(flag == 3 || flag == 7)	//转发消息
+	else if(flag == 3 || flag == 7 || flag == 8 || flag == 9)//转发消息
 	{
-		/*3:文字消息 7：语音消息*/
+		/*3:文字消息 7：语音消息 8:图片消息 9：文件消息*/
 		char * p = msg;
 		processRelay(&p, &send_fd, pPacket->userSocketMap);
 		return NULL;
