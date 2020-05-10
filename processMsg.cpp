@@ -289,6 +289,11 @@ void * process(struct MsgProcessPacket * args)/*char ** msg*/
 		processModifyInfo(&pdata);
 		return NULL;
 	}
+	else if(flag == 10)
+	{
+		processDeleteFriend(&pdata,&send_fd,pPacket->userSocketMap);
+		return NULL;
+	}
 	else
 		return NULL;
 	sprintf(temp, "%4d", strlen(msg));

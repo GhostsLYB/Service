@@ -61,4 +61,6 @@ void exportTable(const char *userName, const char *ip);
 void updateTableField(const char *tableName, const char *conditionField, const char *conditionValue,
 		      const char *modifyField, const char *modifyValue);
 
+void deleteFriend(const char *userName,const char *userName2);
+
 #endif

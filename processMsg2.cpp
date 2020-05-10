@@ -210,3 +210,35 @@ void processModifyInfo(char ** msg)
 	if(strcmp(modifyFlags[modifyFlag], "username"))//用户名需要将users表中的信息也修改（还有其他表待完善）
 		updateTableField("users","username",userName,modifyFlags[modifyFlag],p);	
 }
+
+void processDeleteFriend(char ** msg, int *send_fd, map<string,int> * userSocketMap)
+{
+	char userName[50] = {0};
+	char userName2[50] = {0};
+	char temp[1024] = {0};
+	char *p = *msg;
+	strncpy(temp,p,4); p += 4;
+	strncpy(userName,p,atoi(temp)); p += atoi(temp);
+	strncpy(temp,p,4); p += 4;
+	strncpy(userName2,p,atoi(temp));
+	printf("userName = [%s],userName2 = [%s]\n", userName,userName2);
+	deleteFriend(userName,userName2);	//删除好友
+	//查找userName2用户的登陆套接字
+	pthread_mutex_lock(pMutex);
+	map<string,int>::iterator iter = userSocketMap->find(userName2);
+	if(iter == userSocketMap->end())		//userName2不在线
+	{
+		pthread_mutex_unlock(pMutex);
+		return;
+	}
+	int recv_fd = iter->second;		//向userName2发送被删除的消息 msg = 名2长+名2+名1长+名1
+	pthread_mutex_unlock(pMutex);
+	memset(*msg,0,strlen(*msg));
+	sprintf(*msg,"%4d%4d%s%4d%s",10,strlen(userName2),userName2,strlen(userName),userName);
+	//将char * 的前面加上四个字节的长度
+	addPacketLen(msg);
+	pthread_mutex_lock(pMutex);
+	int ret = writen(recv_fd, *msg, strlen(*msg));
+	pthread_mutex_unlock(pMutex);
+	printf("sendsize = %d,msg = [%s], recv_fd = %d\n",ret,*msg,recv_fd);
+} 

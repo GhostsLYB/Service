@@ -85,3 +85,24 @@ void updateTableField(const char *tableName,const char *conditionField,const cha
 	else
 		printf("update failed!\n");
 }
+
+void deleteFriend(const char *userName,const char *userName2)
+{
+	initMysql();
+	char sql[1024] = {0};
+	sprintf(sql, "delete from %s_chatInfo where peerName = '%s'",userName,userName2);
+	printf("sql = [%s]\n",sql);
+	mysql_query(mysql,sql);
+	sprintf(sql, "delete from %s_chatInfo where peerName = '%s'",userName2,userName);
+	printf("sql = [%s]\n",sql);
+	mysql_query(mysql,sql);
+	sprintf(sql, "delete from recent_chatList where userName = '%s' and friendName = '%s'",userName,userName2); 
+	printf("sql = [%s]\n",sql);
+	mysql_query(mysql,sql);
+	sprintf(sql, "delete from recent_chatList where userName = '%s' and friendName = '%s'",userName2,userName); 
+	printf("sql = [%s]\n",sql);
+	mysql_query(mysql,sql);
+	sprintf(sql, "delete from user_friendList where (requestUser = '%s' and responseUser = '%s') or (requestUser = '%s' and responseUser = '%s')",userName,userName2,userName2,userName);
+	printf("sql = [%s]\n",sql);
+	mysql_query(mysql,sql);
+}
