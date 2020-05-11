@@ -182,7 +182,17 @@ void processLogin(char ** msg, int *send_fd, map<string,int> * userSocketMap)
 		char *pname = username;
 		/*保存登陆日志*/
 		saveLoginLog(pname, inet_ntoa(peeraddr.sin_addr), ntohs(peeraddr.sin_port));
-		/*导出登陆用户需要同步的表的未同步的记录*/
+		/*删除原有导出文件*/
+		char syncFilePath[100] = {0};
+		sprintf(syncFilePath,"/tmp/%s_chatInfo.txt",pname);
+		remove(syncFilePath);
+		sprintf(syncFilePath,"/tmp/%s_recent_chatList.txt",pname);
+		remove(syncFilePath);
+		sprintf(syncFilePath,"/tmp/%s_user_friendList.txt",pname);
+		remove(syncFilePath);
+		remove("/tmp/user_info.txt");
+		remove("/tmp/users.txt");
+		/*导出登陆用户需要同步的表*/
 		exportTable(pname, inet_ntoa(peeraddr.sin_addr));
 		/*发送导出的同步信息文件*/
 		sendSyncFile(pname, *send_fd);
@@ -292,6 +302,16 @@ void * process(struct MsgProcessPacket * args)/*char ** msg*/
 	else if(flag == 10)
 	{
 		processDeleteFriend(&pdata,&send_fd,pPacket->userSocketMap);
+		return NULL;
+	}
+	else if(flag == 11)	//处理添加好友请求（由用户发起请求）
+	{
+		processAddFriend(&pdata,&send_fd,pPacket->userSocketMap);
+		return NULL;	
+	}
+	else if(flag == 12)	//处理添加好友响应（被添加用户反馈的消息）
+	{
+		processAddFriendResponse(&pdata,&send_fd,pPacket->userSocketMap);
 		return NULL;
 	}
 	else

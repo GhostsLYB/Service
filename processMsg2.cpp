@@ -9,7 +9,7 @@
 extern pthread_mutex_t *pMutex;
 int times = 0;
 
-void showFile(const char *filePath, const int fd)
+void sendFile(const char *filePath, const int fd)
 {
 	FILE * file;
 	int maxSection;
@@ -18,8 +18,14 @@ void showFile(const char *filePath, const int fd)
 	printf("存在同步文件[%s]\n", filePath);
 	if((file = fopen(filePath, "r")) == NULL)
 		return;
-	if(!feof(file))		//打开文件非空
+	long fileSize = 0;
+	fseek(file, 0L, SEEK_END);
+	fileSize = ftell(file);
+	fseek(file, 0L, SEEK_SET);
+
+	if(fileSize != 0)		//打开文件非空
 	{
+		printf("file %s is not empty! size = [%ld]\n",filePath,fileSize);
 		string fileName = string(filePath);
 		fileName = fileName.substr(fileName.find_last_of('/') + 1);
 		fseek(file, 0, SEEK_END);
@@ -50,36 +56,40 @@ void showFile(const char *filePath, const int fd)
 void sendSyncFile(const char *userName, const int fd)
 {
 	char fileName[100] = {0};
-	sprintf(fileName, "/tmp/%s_%s_chatInfo.txt", userName, userName);	//聊天信息
-	if(!access(fileName, F_OK))
-	{
-		showFile(fileName, fd);
-		remove(fileName);
-	}
+	//sprintf(fileName, "/tmp/%s_chatInfo.txt", userName);	//聊天信息
+	//if(!access(fileName, F_OK))
+	//{
+	//	sendFile(fileName, fd);
+	//	remove(fileName);
+	//}
 	memset(fileName, 0, sizeof(fileName));
 	sprintf(fileName, "/tmp/%s_recent_chatList.txt", userName);	 	//最近聊天列表
 	if(!access(fileName, F_OK))
 	{
-		showFile(fileName, fd);
-		remove(fileName);
+		sendFile(fileName, fd);
+	//	remove(fileName);
 	}
 	memset(fileName, 0, sizeof(fileName));
 	sprintf(fileName, "/tmp/%s_user_friendList.txt", userName, userName);	//用户好友列表
         if(!access(fileName, F_OK))
 	{
-		showFile(fileName, fd);
-		remove(fileName);
+		sendFile(fileName, fd);
+	//	remove(fileName);
 	}
         memset(fileName, 0, sizeof(fileName));
-	sprintf(fileName, "/tmp/%s_user_info.txt", userName, userName);		//好友用户信息
+	sprintf(fileName, "/tmp/user_info.txt");		//好友账户信息
         if(!access(fileName, F_OK))
 	{
-                showFile(fileName, fd);
-		remove(fileName);
+                sendFile(fileName, fd);
+	//	remove(fileName);
 	}
-	showFile("/tmp/servicetest.txt", fd);
-	//showFile("/tmp/homepage.h", fd);
         memset(fileName, 0, sizeof(fileName));
+	sprintf(fileName, "/tmp/users.txt");		//好友基本信息
+        if(!access(fileName, F_OK))
+	{
+                sendFile(fileName, fd);
+	//	remove(fileName);
+	}
 }
 
 void processRecvFile(char ** msg, int client_fd)/*接收客户端client_fd套接字发送的文件*/
@@ -222,7 +232,7 @@ void processDeleteFriend(char ** msg, int *send_fd, map<string,int> * userSocket
 	strncpy(temp,p,4); p += 4;
 	strncpy(userName2,p,atoi(temp));
 	printf("userName = [%s],userName2 = [%s]\n", userName,userName2);
-	deleteFriend(userName,userName2);	//删除好友
+	//deleteFriend(userName,userName2);	//删除好友
 	//查找userName2用户的登陆套接字
 	pthread_mutex_lock(pMutex);
 	map<string,int>::iterator iter = userSocketMap->find(userName2);
@@ -242,3 +252,22 @@ void processDeleteFriend(char ** msg, int *send_fd, map<string,int> * userSocket
 	pthread_mutex_unlock(pMutex);
 	printf("sendsize = %d,msg = [%s], recv_fd = %d\n",ret,*msg,recv_fd);
 } 
+
+void processAddFriend(char **msg, int *send_fd, map<string,int> *userSocketMap)
+{
+	char userName[50] = {0};
+	char userName2[50] = {0};
+	char temp[1024] = {0};
+	char *p = *msg;
+	strncpy(temp,p,4); p += 4;
+	strncpy(userName,p,atoi(temp)); p += atoi(temp);
+	strncpy(temp,p,4); p += 4;
+	strncpy(userName2,p,atoi(temp));
+	printf("userName = [%s],userName2 = [%s]\n", userName,userName2);
+	
+}
+
+void processAddFriendResponse(char **msg, int *send_fd, map<string,int> *userSocketMap)
+{
+
+}

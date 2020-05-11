@@ -51,20 +51,25 @@ void exportTable(const char *userName, const char *ip)
 	//userName_userName_chatInfo  userName_recent_chatlist userName_user_friendList userName_user_info
 	//userName_chatInfo	      recent_chatList		user_friendList		user_info
 	//login_log
-		memset(sql, 0, sizeof(sql));
-		sprintf(sql, "select * from %s_chatInfo where %s into outfile '/tmp/%s_%s_chatInfo.txt' fields terminated by ' ' enclosed by '\"'", userName, timeCondition, userName, userName);
+		strcpy(timeCondition,"1");//所有记录同步
+		memset(sql, 0, sizeof(sql));//聊天信息
+		sprintf(sql, "select * from %s_chatInfo where %s into outfile '/tmp/%s_chatInfo.txt' fields terminated by ' ' enclosed by '\"'", userName, timeCondition, userName);
 		printf("export sql = [%s]\n",sql);
 		mysql_query(mysql, sql);
-		memset(sql, 0, sizeof(sql));
+		memset(sql, 0, sizeof(sql));//最近聊天列表
                 sprintf(sql, "select * from recent_chatList where username = '%s' and %s into outfile '/tmp/%s_recent_chatList.txt' fields terminated by ' ' enclosed by '\"'", userName, timeCondition, userName);
                 printf("export sql = [%s]\n",sql);
                 mysql_query(mysql, sql);
-		memset(sql, 0, sizeof(sql));
+		memset(sql, 0, sizeof(sql));//好友列表
                 sprintf(sql, "select * from user_friendList where (requestUser = '%s' or responseUser = '%s') and %s into outfile '/tmp/%s_user_friendList.txt' fields terminated by ' ' enclosed by '\"'", userName, userName, timeCondition, userName);
                 printf("export sql = [%s]\n",sql);
                 mysql_query(mysql, sql);
-		memset(sql, 0, sizeof(sql));
-                sprintf(sql, "select * from user_info where username = '%s' or username in (select username from user_friendList where requestUser = '%s' or responseUser = '%s') into outfile '/tmp/%s_user_info.txt' fields terminated by ' ' enclosed by '\"'", userName, userName, userName, userName);
+		memset(sql, 0, sizeof(sql));//账户信息
+                sprintf(sql, "select * from user_info into outfile '/tmp/user_info.txt' fields terminated by ' ' enclosed by '\"'", userName, userName);
+                printf("export sql = [%s]\n",sql);
+                mysql_query(mysql, sql);
+		memset(sql, 0, sizeof(sql));//用户基本信息
+                sprintf(sql, "select id,username,sex,age,email,phone from users into outfile '/tmp/users.txt' fields terminated by ' ' enclosed by '\"'");
                 printf("export sql = [%s]\n",sql);
                 mysql_query(mysql, sql);
 	}

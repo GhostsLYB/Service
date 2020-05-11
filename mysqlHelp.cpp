@@ -59,7 +59,9 @@ bool insertUsers(const char *tableName,const char *arg, ... )
 	strcat(sql, " values(null,\'");
 	va_list ap;
 	va_start(ap,arg);
-	strcat(sql,va_arg(ap,const char*));
+	const char* userName = va_arg(ap,const char*);
+	strcat(sql,userName);
+	//strcat(sql,va_arg(ap,const char*));
 	strcat(sql,"\',\'");
 	strcat(sql,va_arg(ap,const char*));
 	strcat(sql,"\',\'");
@@ -87,8 +89,19 @@ bool insertUsers(const char *tableName,const char *arg, ... )
 		mysql_free_result(mysql_store_result(mysql));
 		int ret = mysql_query(mysql,sql);
 		mysql_free_result(mysql_store_result(mysql));
-		if(ret == 0)
-			return true;
+		if(ret == 0)	//插入users表成功
+		{
+			char *ps = s;
+			getCurrentTime(ps);	//获取当前时间
+			sprintf(sql,"insert into user_info values(null,'%s','null','/tmp/icon.png','null','null','%s')",userName,s);
+			printf("insert user_info sql = [%s]\n",sql);
+			ret = mysql_query(mysql,sql);
+			mysql_free_result(mysql_store_result(mysql));
+			if(ret == 0)
+				return true;
+			else
+				return false;
+		}
 		else
 			return false;
 	}
@@ -181,6 +194,7 @@ void deleteTable(const char* tableName)
 
 void getCurrentTime(char * timebuf)
 {
+	memset(timebuf,0,sizeof(timebuf));
 	time_t alock;
 	time(&alock);
 	strftime(timebuf,20,"%Y-%m-%d %H:%M:%S",localtime(&alock));
@@ -303,23 +317,3 @@ void showTable(const char * tableName)
 	cout << setfill(' ') << endl;
 	mysql_free_result(result);
 }
-/*
-void saveExitLog(const string userName)
-{
-        char sql[1024]   = {0};
-        char curTime[20] = {0};
-        getCurrentTime(curTime);
-        sprintf(sql, "update login_log set exittime = '%s' where time = '2020-03-12 12:39:56'",curTime);
-        printf("saveExitLog = [%s]\n", sql);
-        initMysql();
-        printf("inited\n");
-        int ret = mysql_query(mysql, sql);
-        if(ret == 0)
-                printf("save exitLog successed\n");
-        else
-                printf("save exitLog fail\n");
-        memset(sql, 0, sizeof(sql));
-        sprintf(sql, "delete from login_dynamicInfo where username = '%s'", userName.c_str());
-        mysql_query(mysql, sql);
-}
-*/

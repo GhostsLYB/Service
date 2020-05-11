@@ -51,4 +51,9 @@ void processSendFile(char ** msg, int client_fd);
 void processModifyInfo(char ** msg);
 
 void processDeleteFriend(char ** msg, int *send_fd, map<string,int> * userSocketMap);
+
+void processAddFriend(char **msg, int *send_fd, map<string,int> *userSocketMap);
+
+void processAddFriendResponse(char **msg, int *send_fd, map<string,int> *userSocketMap);
+
 #endif
