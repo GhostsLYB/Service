@@ -232,7 +232,7 @@ void processDeleteFriend(char ** msg, int *send_fd, map<string,int> * userSocket
 	strncpy(temp,p,4); p += 4;
 	strncpy(userName2,p,atoi(temp));
 	printf("userName = [%s],userName2 = [%s]\n", userName,userName2);
-	//deleteFriend(userName,userName2);	//删除好友
+	deleteFriend(userName,userName2);	//删除好友
 	//查找userName2用户的登陆套接字
 	pthread_mutex_lock(pMutex);
 	map<string,int>::iterator iter = userSocketMap->find(userName2);
@@ -264,10 +264,57 @@ void processAddFriend(char **msg, int *send_fd, map<string,int> *userSocketMap)
 	strncpy(temp,p,4); p += 4;
 	strncpy(userName2,p,atoi(temp));
 	printf("userName = [%s],userName2 = [%s]\n", userName,userName2);
-	
+	//userName1请求添加userName2
+	pthread_mutex_lock(pMutex);
+	map<string,int>::iterator iter = userSocketMap->find(userName2);
+	if(iter == userSocketMap->end())		//userName2不在线
+	{
+		pthread_mutex_unlock(pMutex);
+		return;
+	}
+	int recv_fd = iter->second;//向userName2发送添加请求的消息 msg = 名1长+名1+名2长+名2
+	pthread_mutex_unlock(pMutex);
+	//导出user_info和users表信息
+	exportOneTable("user_info");
+	exportOneTable("users");
+	//发送user_info.txt和users.txt文件
+	sendFile("/tmp/user_info.txt",recv_fd);
+	sendFile("/tmp/users.txt",recv_fd);
+	//temp存储转发消息 类型11
+	sprintf(temp,"%4d%4d%s", 4+strlen(*msg), 11, *msg);
+	pthread_mutex_lock(pMutex);
+	int ret = writen(recv_fd, temp, strlen(temp));
+	pthread_mutex_unlock(pMutex);
+	printf("sendsize = %d,msg = [%s], recv_fd = %d\n",ret,temp,recv_fd);
 }
 
 void processAddFriendResponse(char **msg, int *send_fd, map<string,int> *userSocketMap)
 {
-
+	char userName[50] = {0};
+        char userName2[50] = {0};
+        char temp[1024] = {0};
+        char *p = *msg;
+        strncpy(temp,p,4); p += 4;
+        strncpy(userName,p,atoi(temp)); p += atoi(temp);
+        strncpy(temp,p,4); p += 4;
+        strncpy(userName2,p,atoi(temp));
+        printf("userName = [%s],userName2 = [%s]\n", userName,userName2);
+	//存入数据路user_friendList表中
+	insertFriendList(userName, userName2);
+        //userName请求添加userName2(此消息由userName2响应，发送到userName)
+        pthread_mutex_lock(pMutex);
+        map<string,int>::iterator iter = userSocketMap->find(userName);
+        if(iter == userSocketMap->end())                //userName不在线
+        {       
+        	pthread_mutex_unlock(pMutex);
+                return;		//userName不在线直接退出
+        }
+        int recv_fd = iter->second;//向userName2发送添加请求的消息 msg = 名1长+名1+名2长+名2
+        pthread_mutex_unlock(pMutex);
+        //temp存储转发消息 类型11
+        sprintf(temp,"%4d%4d%s", 4+strlen(*msg), 12, *msg);
+        pthread_mutex_lock(pMutex);
+        int ret = writen(recv_fd, temp, strlen(temp));
+        pthread_mutex_unlock(pMutex);
+        printf("sendsize = %d,msg = [%s], recv_fd = %d\n",ret,temp,recv_fd);
 }

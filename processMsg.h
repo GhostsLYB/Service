@@ -22,7 +22,7 @@ void fun(char** buf);
 
 void outInfo(char * buf);
 
-void* sendFile(void* args);
+void sendFile(const char *filePath, const int fd);
 
 /* 注册处理函数*/
 /* *msg数据格式：[长度][数据段][长度][数据段]。。。。。。*/

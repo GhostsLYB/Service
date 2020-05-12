@@ -24,6 +24,16 @@ void saveExitLog(const string userName)
 
 void exportTable(const char *userName, const char *ip)
 {
+	/*删除原有导出文件*/
+        char syncFilePath[100] = {0};
+        sprintf(syncFilePath,"/tmp/%s_chatInfo.txt",userName);
+        remove(syncFilePath);
+        sprintf(syncFilePath,"/tmp/%s_recent_chatList.txt",userName);
+        remove(syncFilePath);
+        sprintf(syncFilePath,"/tmp/%s_user_friendList.txt",userName);
+        remove(syncFilePath);
+        remove("/tmp/user_info.txt");
+        remove("/tmp/users.txt");
 	MYSQL_RES * result;
 	MYSQL_ROW row;
 	char sql[1024] = {0};
@@ -76,6 +86,16 @@ void exportTable(const char *userName, const char *ip)
 
 }
 
+//导出user_info和users表
+void exportOneTable(const char *tableName)
+{
+	initMysql();
+	char sql[1024] = {0};
+	sprintf(sql,"select * from %s into outfile '/tmp/%s.txt' fields terminated by ' ' enclosed by '\"'",tableName,tableName);
+	printf("exportOneTable sql = [%s]\n",sql);
+	mysql_query(mysql,sql);
+}
+
 void updateTableField(const char *tableName,const char *conditionField,const char *conditionValue,
                       const char *modifyField, const char *modifyValue)
 {
@@ -111,3 +131,15 @@ void deleteFriend(const char *userName,const char *userName2)
 	printf("sql = [%s]\n",sql);
 	mysql_query(mysql,sql);
 }
+
+void insertFriendList(const char *userName,const char *userName2)
+{
+	initMysql();
+	char sql[200] = {0};
+	char currTime[20] = {0};
+	char *pTime = currTime;
+	getCurrentTime(pTime);
+	sprintf(sql, "insert into user_friendList values(null,'%s','%s','%s')",userName,userName2,pTime);
+	mysql_query(mysql,sql);
+}
+

@@ -46,6 +46,8 @@ void saveLoginLog(const char* userName, const char* ip, const int port);
 /*保存发送段和接收端聊天信息*/
 void saveChatInfo(string sendName, string recvName,int flag, const char *pMsg , const char *url);
 
+void updateRecentChatList(const char *userName, const char *friendName, const char *lastMsg);
+
 void showTable(const char * tableName);
 
 /* 关闭数据库连接mysql */
@@ -58,9 +60,13 @@ void saveExitLog(const string userName);
 
 void exportTable(const char *userName, const char *ip);
 
+void exportOneTable(const char *tableName);
+
 void updateTableField(const char *tableName, const char *conditionField, const char *conditionValue,
 		      const char *modifyField, const char *modifyValue);
 
 void deleteFriend(const char *userName,const char *userName2);
+
+void insertFriendList(const char *userName, const char *userName2);
 
 #endif

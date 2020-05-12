@@ -237,11 +237,45 @@ void saveChatInfo(string sendName, string recvName,int flag, const char *pMsg , 
                 string(recvName + "_chatInfo").c_str(), sendName.c_str(), flag,
                 pMsg, url, pCurTime);
 	printf("recvSql = [%s]\n",recvSql);
-	if(0 != mysql_query(mysql, sendSql))
+	if(0 != mysql_query(mysql, sendSql))//插入聊天记录失败
 		printf("insert into send chat msg fail\n");
-	if(0 != mysql_query(mysql, recvSql))
+	else
+		updateRecentChatList(recvName.c_str(),sendName.c_str(),(flag == 3)?pMsg:url);
+	if(0 != mysql_query(mysql, recvSql))//
 		printf("insert into recv chat msg fail\n");
+	else
+		updateRecentChatList(sendName.c_str(),recvName.c_str(),(flag == 3)?pMsg:url);
 	
+}
+
+void updateRecentChatList(const char *userName, const char *friendName, const char *lastMsg)
+{
+	initMysql();
+	//在recent_chatList中插入或删除一条指定记录
+	char sql[200] = {0};
+	sprintf(sql, "select count(*) from recent_chatList where userName = '%s' and friendName = '%s'",userName,friendName);
+	printf("update recent chat list sql = [%s]\n",sql);
+	mysql_query(mysql,sql);
+	MYSQL_RES * result = mysql_store_result(mysql);
+ 	int count = mysql_num_rows(result);
+	mysql_free_result(result);
+	char currTime[20] = {0};
+	char *pTime = currTime;
+	getCurrentTime(pTime);
+	if(count > 0)//有记录更新
+	{
+		sprintf(sql, "update recent_chatList set lastMessage = '%s',time = '%s' where userName = '%s' and friendName = '%s'","message",pTime,userName,friendName);
+		printf("update recent chat list sql = [%s]\n",sql);
+		if(!mysql_query(mysql,sql))
+			printf("update recent chat list fail\n");
+	}
+	else	//没有记录插入
+	{
+		sprintf(sql, "insert into recent_chatList values(null,'%s','%s','%s','%s','0')",userName,friendName,"message",pTime);
+		printf("insert recent chat list sql = [%s]\n",sql);
+		if(!mysql_query(mysql,sql))
+			printf("insert recent chat list fail\n");
+	}
 }
 
 void showTable(const char * tableName)
