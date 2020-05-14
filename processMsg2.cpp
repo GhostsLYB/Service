@@ -152,20 +152,34 @@ void processSendFile(char **msg, int client_fd)/*向客户端client_fd套接字�
 	strncpy(fileName, p, atoi(temp));//读取文件名
 	sprintf(filePath, "/tmp/%s", fileName);//设置文件路径
 	FILE * sendFile = fopen(filePath, "r");
-	if(sendFile == NULL){
+		
+	if(sendFile == NULL){//文件不存在
 		printf("open file [%s] fail!\n", filePath); 
+		strcpy(sendbuf,"__NOT_EXIST__");
+		int len = strlen("__NOT_EXIST__");
+		int writeLen = write(client_fd, sendbuf, len);
+		//printf("file[%s],readlen[%d],writeSize[%d]\n", fileName, len, writeLen);
+		return;
 	}
 	else{
 		fseek(sendFile, 0L, SEEK_END);
 		fileSize = ftell(sendFile);
 		fseek(sendFile, 0L, SEEK_SET);
 	}
+	if(fileSize == 0)//文件为空
+	{
+		printf("file [%s] size is 0\n", filePath); 
+		strcpy(sendbuf,"__EMPTY__");
+		int len = strlen("__EMPTY__");
+		int writeLen = write(client_fd, sendbuf, len);
+		//printf("file[%s],readlen[%d],writeSize[%d]\n", fileName, len, writeLen);
+		return;
+	}
 	sprintf(sendbuf, "%4d%s%8ld", strlen(fileName), fileName, fileSize);//发送文件信息的缓冲区
 	printf("send file [%s]\n", sendbuf);
 	write(client_fd, sendbuf, strlen(sendbuf));//发送文件信息
 	memset(sendbuf, 0, sizeof(sendbuf));
-	if(fileSize == 0) //文件为空或文件不存在时不发送
-		return;
+
 	usleep(20000);//暂停20毫秒
 	//sleep(1); //暂停一秒再发送数据
 	
@@ -175,7 +189,7 @@ void processSendFile(char **msg, int client_fd)/*向客户端client_fd套接字�
 		int len = fread(sendbuf, sizeof(char), BUF_SIZE, sendFile);
 		int writeLen = write(client_fd, sendbuf, len);
 		sendSize += writeLen;
-		printf("file[%s],readlen[%d],writeSize[%d],sendSize[%ld]\n", fileName, len, writeLen, sendSize);
+		//printf("file[%s],readlen[%d],writeSize[%d],sendSize[%ld]\n", fileName, len, writeLen, sendSize);
 		memset(sendbuf, 0, sizeof(sendbuf));
 		usleep(100000);//间隔100毫秒发送数据
 		//sleep(1);
