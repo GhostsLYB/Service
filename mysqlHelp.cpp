@@ -257,7 +257,8 @@ void updateRecentChatList(const char *userName, const char *friendName, const ch
 	printf("update recent chat list sql = [%s]\n",sql);
 	mysql_query(mysql,sql);
 	MYSQL_RES * result = mysql_store_result(mysql);
- 	int count = mysql_num_rows(result);
+	MYSQL_ROW row = mysql_fetch_row(result);
+ 	int count = atoi(row[0]);
 	mysql_free_result(result);
 	char currTime[20] = {0};
 	char *pTime = currTime;
@@ -266,14 +267,14 @@ void updateRecentChatList(const char *userName, const char *friendName, const ch
 	{
 		sprintf(sql, "update recent_chatList set lastMessage = '%s',time = '%s' where userName = '%s' and friendName = '%s'","message",pTime,userName,friendName);
 		printf("update recent chat list sql = [%s]\n",sql);
-		if(!mysql_query(mysql,sql))
+		if(mysql_query(mysql,sql))
 			printf("update recent chat list fail\n");
 	}
 	else	//没有记录插入
 	{
 		sprintf(sql, "insert into recent_chatList values(null,'%s','%s','%s','%s','0')",userName,friendName,"message",pTime);
 		printf("insert recent chat list sql = [%s]\n",sql);
-		if(!mysql_query(mysql,sql))
+		if(mysql_query(mysql,sql))
 			printf("insert recent chat list fail\n");
 	}
 }
