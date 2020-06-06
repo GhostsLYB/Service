@@ -178,6 +178,7 @@ void processSendFile(char **msg, int client_fd)/*向客户端client_fd套接字�
 	sprintf(sendbuf, "%4d%s%8ld", strlen(fileName), fileName, fileSize);//发送文件信息的缓冲区
 	printf("send file [%s]\n", sendbuf);
 	write(client_fd, sendbuf, strlen(sendbuf));//发送文件信息
+	printf("send file info end!\n");
 	memset(sendbuf, 0, sizeof(sendbuf));
 
 	usleep(20000);//暂停20毫秒
@@ -189,7 +190,7 @@ void processSendFile(char **msg, int client_fd)/*向客户端client_fd套接字�
 		int len = fread(sendbuf, sizeof(char), BUF_SIZE, sendFile);
 		int writeLen = write(client_fd, sendbuf, len);
 		sendSize += writeLen;
-		//printf("file[%s],readlen[%d],writeSize[%d],sendSize[%ld]\n", fileName, len, writeLen, sendSize);
+		printf("file[%s],readlen[%d],writeSize[%d],sendSize[%ld]\n", fileName, len, writeLen, sendSize);
 		memset(sendbuf, 0, sizeof(sendbuf));
 		usleep(100000);//间隔100毫秒发送数据
 		//sleep(1);

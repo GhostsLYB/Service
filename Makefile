@@ -4,6 +4,7 @@
 # processMsg.h 消息处理函数头文件
 # mysqlhelp.h  数据库操作函数头文件
 # data.h       结构体定义头文件
+
 service:service.o processMsg.o processMsg2.o mysqlHelp.o mysqlHelp2.o
 	g++ -g -o service service.o processMsg.o processMsg2.o mysqlHelp.o mysqlHelp2.o -L/usr/lib64/mysql -lmysqlclient -pthread
 

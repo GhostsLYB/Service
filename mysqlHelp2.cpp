@@ -86,7 +86,7 @@ void exportTable(const char *userName, const char *ip)
 
 }
 
-//导出user_info和users表
+//用于导出user_info和users表
 void exportOneTable(const char *tableName)
 {
 	initMysql();

@@ -209,7 +209,7 @@ void processRelay(char ** msg,int * send_fd, map<string,int> * userSocketMap)
 	p += 4;
 	strncpy(recvName,p,atoi(temp));		//取接收用户名
 	p += atoi(temp);
-	//如果接收方不在线，则将消息存入数据路，当用户登陆时发送
+	//如果接收方不在线，则将消息存入数据路，当用户登陆时同步数据
 	strcpy(temp,p);
 	pthread_mutex_lock(pMutex);
 	map<string,int>::iterator iter = userSocketMap->begin();
@@ -218,9 +218,8 @@ void processRelay(char ** msg,int * send_fd, map<string,int> * userSocketMap)
 		if(iter->second == *send_fd)
 			break;
 	}
-	int recv_fd = (*userSocketMap)[string(recvName)];	//接收端套接字
 	pthread_mutex_unlock(pMutex);
-	string sendName = iter->first;				//发送发用户名
+	string sendName = iter->first;		//发送方用户名
 	char * pMsg = NULL;
 	char * url  = NULL;
 	if(flag == 3)
@@ -232,10 +231,14 @@ void processRelay(char ** msg,int * send_fd, map<string,int> * userSocketMap)
 		url = temp + 4;
 	}
 	saveChatInfo(sendName, string(recvName), flag, pMsg, url);
-	if(recv_fd == 0)	//原带有flag的消息加上消息长度头部后存入数据库
-	{
+
+	map<string,int>::iterator recvIter = (*userSocketMap).find(string(recvName));
+	int recv_fd;
+	if(recvIter != userSocketMap->end())
+		recv_fd = recvIter->second;	//接收端套接字
+	else					//接收方不在线时只保存不发送
 		return;
-	}
+
 	memset(*msg + 4, 0, sizeof(*msg));		//保留 flag 部分
 	sprintf(*msg + 4,"%4d",strlen(sendName.c_str()));	//在flag后面追加发送用户名长度
 	strcat(*msg,sendName.c_str());		     	//追加发送用户名

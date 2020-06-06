@@ -87,7 +87,7 @@ int main(void)
 	if(setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
 		ERR_EXIT("setsockopt");	
 	
-	//将套接字与地址绑定（本机所有地址或只有本机地址）
+	//将套接字与地址绑定
 	if(bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) < 0)
 		ERR_EXIT("bind");
 	
@@ -102,8 +102,7 @@ int main(void)
 	int recv_size = RECV_SIZE;
 	socklen_t optlen = sizeof(recv_size);
 	
-	//在单进程中使用epoll维护多个套接口（包括监听套接口和已连接套接口）
-	
+	//在单进程中使用epoll维护多个文件描述符（包括监听套接口和已连接套接口和标准输入）
 	struct epoll_event ev, events[MAXSIZE] = {0};
 	ev.events = EPOLLIN;
 	ev.data.fd = listenfd;
@@ -115,6 +114,8 @@ int main(void)
 	int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, listenfd, &ev);
 	if(ret == -1)
 		ERR_EXIT("epoll ctl");
+
+	//将标准输入文件描述符0，添加到epoll中
 	ev.events = EPOLLIN | EPOLLET;
 	ev.data.fd = 0;
 	ret = epoll_ctl(epfd, EPOLL_CTL_ADD, 0, &ev);
@@ -130,7 +131,8 @@ int main(void)
 	else
 		printf("check service data process fail\n");
 	bool isExit = false;
-	int exitSocket = -1;/*退出epoll的套接字，大于2时退出*/
+	/*0、1、2 分别书标准输入、标准输出和标准错误输出*/
+	int exitSocket = -1;/*退出epoll的套接字，大于2时客户端退出*/
 	while(1)
 	{
 		if(isExit)
@@ -169,15 +171,15 @@ int main(void)
 				conn = accept(events[i].data.fd, (struct sockaddr*)&peeraddr, &peerlen);
 				/*设置套接字conn的接受缓冲区大小*/
 				setsockopt(conn, SOL_SOCKET,SO_RCVBUF , (char *)&recv_size, optlen);
-#ifdef TEST_SOCK_BUF
 
-int err = getsockopt(conn, SOL_SOCKET, SO_RCVBUF, &recv_size, &optlen); 
-    if(err<0){ 
-        printf("获取接收缓冲区大小错误\n"); 
-    } 
-   printf(" 接收缓冲区原始大小为: %d 字节\n",recv_size); 
+				#ifdef TEST_SOCK_BUF
+				int err = getsockopt(conn, SOL_SOCKET, SO_RCVBUF, &recv_size, &optlen); 
+    				if(err<0){ 
+        				printf("获取接收缓冲区大小错误\n"); 
+    				} 
+				printf(" 接收缓冲区原始大小为: %d 字节\n",recv_size); 
+				#endif
 
-#endif
 				if(conn < 0)
 					ERR_EXIT("accept");
 				ev.events = EPOLLIN | EPOLLET;
@@ -296,15 +298,16 @@ void * checkServiceData(void *args)
 void * processClientMsg(void * args)
 {
 	/*获取args参数的数据*/
-	int 		epfd 	  = ((struct ProcessClientMsgPacket*)args)->epfd;
-	int 		client_fd = ((struct ProcessClientMsgPacket*)args)->client_fd;
-	map<string,int> *pMap 	  = ((struct ProcessClientMsgPacket*)args)->pMap;
-	pthread_mutex_t *pMutex   = ((struct ProcessClientMsgPacket*)args)->pMutex;
+	int 		epfd 	    = ((struct ProcessClientMsgPacket*)args)->epfd;
+	int 		client_fd   = ((struct ProcessClientMsgPacket*)args)->client_fd;
+	map<string,int> *pMap 	    = ((struct ProcessClientMsgPacket*)args)->pMap;
+	pthread_mutex_t *pMutex     = ((struct ProcessClientMsgPacket*)args)->pMutex;
 	int		*exitSocket = ((struct ProcessClientMsgPacket*)args)->exitSocket;
 
 	char recvbuf[SENDSIZE] = {0};
 	char temp[1024] = {0};
 	char * p = temp;
+
 	pthread_mutex_lock(pMutex);
 	readn(client_fd, recvbuf, 4);		/*读取消息长度*/
 	int len = atoi(recvbuf);
@@ -313,9 +316,10 @@ void * processClientMsg(void * args)
 	int ret = readn(client_fd, recvbuf, len);	/*读取消息*/
 	printf("recvbuf is [%s]\n", recvbuf);
 	pthread_mutex_unlock(pMutex);
+
 	if(ret == -1)
 		ERR_EXIT("readn");
-	if(ret == 0)				/*客户端关闭*/
+	if(ret == 0)	/*客户端套接字断开连接，登陆长连接或文件短链接*/
         {
 		string exitUserName = "";
 		pthread_mutex_lock(pMutex);	/*将userSocketMap中对应的项删除*/
@@ -328,7 +332,7 @@ void * processClientMsg(void * args)
 				break;
 			}
 		}
-		if(exitUserName != "")		/*保存退出日志（存入用户退出登陆时间）*/
+		if(exitUserName != "")		/*保存退出信息（存入用户退出登陆时间）*/
 			saveExitLog(exitUserName);
                 printf("client closed\n");
                 close(client_fd);		/*关闭客户端套接字*/
